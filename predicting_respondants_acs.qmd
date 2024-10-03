@@ -1,0 +1,92 @@
+---
+title: "Predicting Respondants from ACS"
+date: 3 October 2024
+format: pdf
+editor: visual
+---
+
+## Instructions on how to obtain the data.
+1. Go to https://usa.ipums.org/usa/ 
+2. Click on "Get Data" under "CREATE YOUR CUSTOM DATA SET"
+3. Click on SELECT SAMPLES
+4. Remove Defaults and select 2022 ACS
+5. Submit sample selections
+6. Under Household select Geographic
+7. Select STATEICP
+8. Under Person select Demograph aic
+9. Select Sex
+10. Under Person select Education
+11. Select EDUC
+12. Select View Cart
+13. Create Data Extract
+14. Confirm all extract requests are as desired.
+15. Submit Extract
+
+## Brief Overview of the Ratio Estimator Approach
+
+We were provided with the total number of respondents for the state of California. By filtering the data by state and education level, we determined the number of individuals with doctoral degrees in California. 
+
+Using this information, we applied a ratio estimator to estimate the total number of respondents for any other state, X. The formula used is:
+
+$$
+\text{Total respondents in state X} = \left( \frac{\text{Number of doctoral degrees in state X}}{\text{Number of doctoral degrees in California}} \right) \times \text{Total respondents in California}
+$$
+
+This method assumes that the ratio of doctoral degree holders to the total population is consistent across states, allowing us to estimate the total respondents for state X based on its doctoral degree count and California’s known values.
+
+## Your estimates and the actual number of respondents.
+
+```{r}
+#| echo: False
+#| warning: False
+# read data from csv
+library(dplyr)
+data <- read.csv("usa_data.csv")
+ 
+# actual_no_of_respondents in each state, group by STATEICP and count
+actual_no_of_respondents <- data %>%
+  group_by(STATEICP) %>%
+  summarise(no_of_respondents = n())
+ 
+# number of respondents having doctoral degree by state
+doctoral <- data %>%
+  group_by(STATEICP) %>%
+  summarise(doctoral_degree = sum(EDUCD == 116, na.rm = TRUE)) %>%
+  arrange(desc(doctoral_degree)) 
+
+# California is 71
+# Total respondents in california were 391,171
+
+# Respondents with doctoral degree in california were 6336
+doctoral_degrees_california <- doctoral %>%
+  filter(STATEICP == 71) %>%
+  pull(doctoral_degree)
+
+
+# Total number of respondents in each state would be
+# Each state's doctoral degree count * 391171 / 6336
+# Create a new column in doctoral dataframe with this value 
+doctoral <- doctoral %>%
+  mutate(total_respondents = doctoral_degree * 391171 / doctoral_degrees_california)
+ 
+# Append the actual_no_of_respondents to the doctoral dataframe
+doctoral <- merge(doctoral, actual_no_of_respondents, by = "STATEICP")
+
+# Rename the columns
+doctoral <- doctoral %>%
+  rename(predicted_respondents = total_respondents, 
+         actual_respondents = no_of_respondents)
+
+doctoral
+ 
+```
+
+
+## Some explanation of why you think they are different.
+
+The difference between the estimated and actual number of respondents arises from several key factors. The ratio estimator assumes that the proportion of doctoral degree holders in California reflects other states, but educational attainment varies. States with more research institutions, like Massachusetts, often have more residents with advanced degrees compared to others, which the estimator overlooks.
+
+Additionally, population size differences matter. Larger states, such as Texas, have more respondents, which the ratio estimator doesn't fully capture. Sampling biases in survey response rates across states can also lead to discrepancies, as some states may be over- or underrepresented in the sample.
+
+Finally, socioeconomic disparities affect educational achievement, with wealthier states often having more doctoral degree holders. The estimator’s assumption of uniformity across states doesn’t consider these variations, leading to the observed differences between estimated and actual respondent numbers.
+
