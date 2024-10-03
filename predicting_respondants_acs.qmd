@@ -26,7 +26,7 @@ editor: visual
 
 We were provided with the total number of respondents for the state of California. By filtering the data by state and education level, we determined the number of individuals with doctoral degrees in California. 
 
-Using this information, we applied a ratio estimator to estimate the total number of respondents for any other state, X. The formula used is:
+Using this information, we applied the Pierre Laplace's ratio estimator to estimate the total number of respondents for any other state, X. The formula used is:
 
 $$
 \text{Total respondents in state X} = \left( \frac{\text{Number of doctoral degrees in state X}}{\text{Number of doctoral degrees in California}} \right) \times \text{Total respondents in California}
